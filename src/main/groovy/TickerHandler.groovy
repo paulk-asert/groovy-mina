@@ -22,7 +22,7 @@ import org.apache.mina.core.session.IoSession
 // async/channel world. This class deliberately contains zero protocol
 // logic -- it just opens a per-session inbox channel, forwards incoming
 // messages into it, and lets a single async task drive the protocol
-// linearly with `for await`. See TickerProtocol for that task.
+// linearly with `for`. See TickerProtocol for that task.
 class TickerHandler extends IoHandlerAdapter {
     static final String INBOX = 'inbox'
 

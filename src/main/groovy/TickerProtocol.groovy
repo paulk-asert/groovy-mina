@@ -57,7 +57,7 @@ class TickerProtocol {
             var cancel = new AtomicBoolean(false)
             subs[sym] = cancel
             async {
-                for await (price in registry.subscribe(sym)) {
+                for (price in registry.subscribe(sym)) {
                     if (cancel.get()) break
                     session.write("TICK $sym $price")
                 }
