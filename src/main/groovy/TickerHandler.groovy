@@ -25,6 +25,7 @@ import org.apache.mina.core.session.IoSession
 // linearly with `for`. See TickerProtocol for that task.
 class TickerHandler extends IoHandlerAdapter {
     static final String INBOX = 'inbox'
+    static final String TASK  = 'task'
 
     TickerRegistry registry
 
@@ -35,9 +36,18 @@ class TickerHandler extends IoHandlerAdapter {
         // NIO thread calling messageReceived never blocks in practice.
         var inbox = AsyncChannel.create(64)
         session.setAttribute(INBOX, inbox)
-        async {
+        // The protocol task's lifetime is bound to the session. We cannot
+        // await it here -- this method runs on MINA's NIO thread -- so we
+        // observe completion via whenComplete (so failures cannot be
+        // silently swallowed) and stash the Awaitable on the session so
+        // sessionClosed/exceptionCaught can cancel it as a backstop.
+        var task = async {
             new TickerProtocol(session: session, inbox: inbox, registry: registry).run()
         }
+        task.whenComplete { _, throwable ->
+            if (throwable) exceptionCaught(session, throwable)
+        }
+        session.setAttribute(TASK, task)
     }
 
     @Override
@@ -48,12 +58,14 @@ class TickerHandler extends IoHandlerAdapter {
     @Override
     void sessionClosed(IoSession session) {
         session.getAttribute(INBOX)?.close()
+        session.getAttribute(TASK)?.cancel()
     }
 
     @Override
     void exceptionCaught(IoSession session, Throwable cause) {
         cause.printStackTrace()
         session.getAttribute(INBOX)?.close()
+        session.getAttribute(TASK)?.cancel()
         session.closeNow()
     }
 }
