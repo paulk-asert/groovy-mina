@@ -16,6 +16,8 @@
 
 import org.apache.commons.rng.UniformRandomProvider
 import org.apache.commons.rng.simple.RandomSource
+import org.apache.sshd.common.session.Session
+import org.apache.sshd.common.session.SessionListener
 import org.apache.sshd.server.Environment
 import org.apache.sshd.server.ExitCallback
 import org.apache.sshd.server.SshServer
@@ -46,6 +48,16 @@ class BrokerBoxServer {
         sshd.commandFactory = { ChannelSession ch, String line ->
             new QuoteCommand(commandLine: line, basePrices: basePrices, rng: rng)
         } as CommandFactory
+        // Post-handshake hook: in production this is where you'd install
+        // session-scoped audit, tighten algorithms, attach resource limits, etc.
+        sshd.addSessionListener(new SessionListener() {
+            @Override
+            void sessionEvent(Session session, SessionListener.Event event) {
+                if (event == SessionListener.Event.KeyEstablished) {
+                    println "[$name] SECURED ${session.ioSession.remoteAddress}"
+                }
+            }
+        })
         sshd.start()
     }
 

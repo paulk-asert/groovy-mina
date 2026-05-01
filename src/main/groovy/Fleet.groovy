@@ -62,6 +62,7 @@ class Fleet implements AutoCloseable {
         try {
             session.addPasswordIdentity(host.password)
             session.auth().verify(Duration.ofSeconds(2))
+            assert session.isAuthenticated()
             var out = new ByteArrayOutputStream()
             var channel = session.createExecChannel("quote ${symbols.join(',')}")
             try {

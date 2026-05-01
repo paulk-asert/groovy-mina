@@ -23,7 +23,7 @@ plugins {
 version = '0.1'
 group = 'groovy.blog'
 var groovyVersion = '6.0.0-SNAPSHOT'
-var minaVersion = '2.2.6'
+var minaVersion = '2.2.7'
 var sshdVersion = '2.17.1'
 var commonsRngVersion = '1.7'
 

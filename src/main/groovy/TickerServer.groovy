@@ -14,6 +14,43 @@
  * limitations under the License.
  */
 
+/**
+ * Part 1 entry point: streams ticks from a stub feed (FakeTickSource) to
+ * MINA-connected clients over a plain-text line protocol.
+ *
+ * The bridging pattern (per session):
+ *
+ *   ┌────────┐   TCP    ┌──────────────────────────────────┐
+ *   │ client │◄────────►│ NIO acceptor + codec + logger    │
+ *   └────────┘          └────────────────┬─────────────────┘
+ *                                        │ messageReceived
+ *                                        ▼
+ *                        ┌─────────────────────────────┐
+ *                        │ TickerHandler (NIO thread)  │
+ *                        └────────────────┬────────────┘
+ *                                         │ inbox.send(line)
+ *                                         ▼
+ *                        ┌─────────────────────────────┐
+ *                        │ AsyncChannel(64) ◄── back-pressure
+ *                        └────────────────┬────────────┘
+ *                                         │ for line in inbox
+ *                                         ▼
+ *                        ┌─────────────────────────────┐
+ *                        │ TickerProtocol task         │
+ *                        │ (virtual thread)            │
+ *                        │ SUBSCRIBE / QUOTE / ...     │
+ *                        └─────────────────────────────┘
+ *
+ * The shared data plane:
+ *
+ *   FakeTickSource ──publish──► TickerRegistry (@ActiveObject) ──subscribe──► TickerProtocol
+ *   (one async / sym)            BroadcastChannel per symbol                   (for await price
+ *                                latest: Map<sym, BigDecimal>                  session.write TICK)
+ *                                              ▲
+ *                                              │ lastTick()
+ *                                              │
+ *                                       TickerProtocol (for QUOTE)
+ */
 
 import groovy.concurrent.Awaitable
 import org.apache.mina.filter.codec.ProtocolCodecFilter
@@ -22,7 +59,6 @@ import org.apache.mina.filter.logging.LoggingFilter
 import org.apache.mina.transport.socket.nio.NioSocketAcceptor
 
 import java.nio.charset.StandardCharsets
-import java.util.concurrent.TimeoutException
 
 // ----- Bring up the registry, the fake feed, and the MINA acceptor -----
 

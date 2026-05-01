@@ -14,6 +14,24 @@
  * limitations under the License.
  */
 
+/**
+ * Part 2 entry point: replaces Part 1's stub feed with a fleet of SSH-backed
+ * broker boxes. The hub (TickerHandler / TickerProtocol / TickerRegistry) is
+ * unchanged from Part 1; only the producer side is new.
+ *
+ * One tick of the fleet feed:
+ *
+ *   hub                       ParallelScope            broker-1, broker-2, broker-3
+ *    │                              │                          │
+ *    ├─FleetTickSource (async)─────►│                          │
+ *    │                              ├─collectParallel──────────┼─►quote AAPL,GOOG,MSFT,TSLA
+ *    │                              │                          │   (one virtual thread per host)
+ *    │                              │◄──── per-host quotes ────┤
+ *    │                              │                          │
+ *    │◄──aggregate (mean) + publish─┤                          │
+ *    │                                                         │
+ *    ├─BroadcastChannel.send  → all subscribed sessions        │
+ */
 
 import groovy.concurrent.Awaitable
 import org.apache.mina.filter.codec.ProtocolCodecFilter
@@ -22,7 +40,6 @@ import org.apache.mina.filter.logging.LoggingFilter
 import org.apache.mina.transport.socket.nio.NioSocketAcceptor
 
 import java.nio.charset.StandardCharsets
-import java.time.Duration
 
 // ----- Pick free local ports for our broker SSHD servers -----
 
