@@ -38,7 +38,7 @@ dependencies {
     implementation "org.apache.mina:mina-core:$minaVersion"
     implementation "org.apache.sshd:sshd-core:$sshdVersion"
     implementation "org.apache.commons:commons-rng-simple:$commonsRngVersion"
-    implementation 'org.slf4j:slf4j-simple:2.0.17'
+    implementation 'org.slf4j:slf4j-simple:2.0.18'
 }
 
 var jdkVersion = providers.gradleProperty('jdkVersion').getOrElse('21')
